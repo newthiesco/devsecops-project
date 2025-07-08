@@ -19,7 +19,15 @@ pipeline {
         }
         stage('Checkout from Git') {
             steps {
-                git credentialsId: 'GITHUB', url: 'https://github.com/newthiesco/devsecops-project.git', 'branch': 'main'
+                git credentialsId: 'GITHUB', 
+                    url: 'https://github.com/newthiesco/devsecops-project.git', 
+                    branch: 'main'
+            }
+        }
+
+        stage('Debug Git Branches') {
+            steps {
+                sh 'git remote -v && git branch -a'
             }
         }
         stage('Sonarqube Analysis') {
@@ -112,3 +120,6 @@ pipeline {
         }
     }
 }
+
+
+

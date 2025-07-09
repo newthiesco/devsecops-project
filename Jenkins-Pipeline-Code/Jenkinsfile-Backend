@@ -17,6 +17,7 @@ pipeline {
                 cleanWs()
             }
         }
+
         stage('Checkout from Git') {
             steps {
                 git credentialsId: 'GITHUB', 
@@ -35,9 +36,9 @@ pipeline {
             steps {
                 dir('Application-Code/backend') {
                     withSonarQubeEnv('sonar-server') {
-                        sh ''' $SCANNER_HOME/bin/sonar-scanner \
+                        sh '''$SCANNER_HOME/bin/sonar-scanner \
                         -Dsonar.projectName=three-tier-backend \
-                        -Dsonar.projectKey=three-tier-backend '''
+                        -Dsonar.projectKey=three-tier-backend'''
                     }
                 }
             }
@@ -105,23 +106,28 @@ pipeline {
                 dir('Kubernetes-Manifests-file/Backend') {
                     withCredentials([string(credentialsId: 'github', variable: 'GITHUB_TOKEN')]) {
                         sh '''
+                            set -euxo pipefail
+
                             git config user.email "newthiesco@gmail.com"
                             git config user.name "newthiesco"
 
                             echo "BUILD_NUMBER is: $BUILD_NUMBER"
 
-                            # Extract current image tag using grep and cut
                             imageLine=$(grep 'image:' deployment.yaml)
                             imageTag=$(echo "$imageLine" | cut -d ':' -f3)
 
                             echo "Old Image Tag: $imageTag"
 
-                            # Replace the tag with the new build number
                             sed -i "s|${AWS_ECR_REPO_NAME}:${imageTag}|${AWS_ECR_REPO_NAME}:${BUILD_NUMBER}|" deployment.yaml
 
                             git add deployment.yaml
-                            git commit -m "Update deployment Image to version ${BUILD_NUMBER}"
+                            git commit -m "Update deployment Image to version ${BUILD_NUMBER}" || echo "No changes to commit"
+
+                            git pull origin main --rebase
                             git push https://${GITHUB_TOKEN}@github.com/${GIT_USER_NAME}/${GIT_REPO_NAME} HEAD:main
+
+                            echo "Deployment update pushed successfully"
+                            exit 0
                         '''
                     }
                 }
